@@ -53,15 +53,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run pytest
-        run: pytest -v
+      # REPLACE the "Run pytest" step with these two steps:
+      - name: Run tests with coverage
+        run: pytest -v --cov=calculator --cov-report=term-missing
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .coverage
+          retention-days: 7
 
-  # NEW: Deployment job with conditions
   deploy:
     name: Deploy to Production
-    needs: [lint, test]  # Wait for both lint and test
+    needs: [lint, test]
     runs-on: ubuntu-latest
-    # Only run if ALL these conditions are true:
     if: |
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
