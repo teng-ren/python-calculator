@@ -1,51 +1,55 @@
-name: Cross-Platform Testing
+name: Run Tests with Linting
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.11', '3.12']
-        
-        # Exclude specific combinations
-        exclude:
-          - os: macos-latest
-            python-version: '3.9'
-        
-        # Include additional specific combinations
-        include:
-          - os: ubuntu-latest
-            python-version: '3.13-dev'
-            experimental: true
-      
-      fail-fast: false
-    
-    # Allow experimental jobs to fail without failing the workflow
-    continue-on-error: ${{ matrix.experimental == true }}
+  # NEW: Linting job that runs first
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Run tests with coverage
-        run: pytest -v --cov=calculator --cov-report=term-missing
+          python-version: '3.11'
+      
+      - name: Install flake8
+        run: pip install flake8
+      
+      - name: Run linter
+        run: flake8 calculator.py test_calculator.py --max-line-length=100
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+  # UPDATED: Test job now depends on lint passing
+  test:
+    name: Test Calculator
+    needs: lint  # This makes test wait for lint to pass
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: coverage-report
-          path: .coverage
-            
+          python-version: '3.11'
+      
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
