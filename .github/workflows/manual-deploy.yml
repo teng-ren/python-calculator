@@ -1,0 +1,56 @@
+name: Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      version:
+        description: 'Version tag to deploy'
+        required: true
+        type: string
+        default: 'v1.0.0'
+      dry_run:
+        description: 'Perform a dry run (no actual deployment)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Display deployment info
+        run: |
+          echo "🎯 Target Environment: ${{ inputs.environment }}"
+          echo "📦 Version: ${{ inputs.version }}"
+          echo "🧪 Dry Run: ${{ inputs.dry_run }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
+      
+      - name: Validate environment
+        run: |
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "⚠️  WARNING: Deploying to PRODUCTION"
+          fi
+      
+      - name: Deploy
+        if: inputs.dry_run == false
+        run: |
+          echo "🚀 Starting deployment..."
+          sleep 2
+          echo "✅ Deployment complete!"
+      
+      - name: Dry run
+        if: inputs.dry_run == true
+        run: echo "🧪 Dry run completed - no changes made"
